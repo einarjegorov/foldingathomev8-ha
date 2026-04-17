@@ -35,7 +35,7 @@ the internet without a carefully designed secure proxy.
 
 ## Connectivity Notes
 
-Home Assistant must be able to reach the FAH v8 websocket on port `7396`. If
+Home Assistant must be able to reach the FAH v8 websocket on an exposed port. If
 your Folding@home instance is running behind a container, VM, or firewall,
 ensure that the port is exposed and reachable from Home Assistant.
 
