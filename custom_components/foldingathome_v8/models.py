@@ -83,6 +83,8 @@ class NormalizedClientData:
     group_name: str
     group_config: GroupConfig
     client_state: str
+    cpu_count: int | None
+    gpu_count: int | None
     active_work_units: tuple[WorkUnit, ...]
     total_ppd: int
     raw_state: Mapping[str, Any]
@@ -119,6 +121,8 @@ def normalize_client_data(
             group_name="",
             group_config=GroupConfig(paused=False, finish=False),
             client_state=STATE_DISCONNECTED if not available else STATE_WAITING,
+            cpu_count=None,
+            gpu_count=None,
             active_work_units=(),
             total_ppd=0,
             raw_state={},
@@ -130,6 +134,8 @@ def normalize_client_data(
     group_config = _default_group_config(raw_state)
     work_units = tuple(_iter_default_group_units(raw_state))
     total_ppd = sum(unit.ppd or 0 for unit in work_units)
+    cpu_count = _extract_cpu_count(raw_state, work_units)
+    gpu_count = _extract_gpu_count(raw_state, work_units)
 
     return NormalizedClientData(
         available=available,
@@ -143,6 +149,8 @@ def normalize_client_data(
             group_config=group_config,
             work_units=work_units,
         ),
+        cpu_count=cpu_count,
+        gpu_count=gpu_count,
         active_work_units=work_units,
         total_ppd=total_ppd,
         raw_state=raw_state,
@@ -180,6 +188,82 @@ def _default_group_config(raw_state: Mapping[str, Any]) -> GroupConfig:
         )
 
     return GroupConfig(paused=False, finish=False)
+
+
+def _default_group_state(raw_state: Mapping[str, Any]) -> Mapping[str, Any]:
+    groups = raw_state.get("groups")
+    if isinstance(groups, Mapping):
+        default_group = groups.get("")
+        if isinstance(default_group, Mapping):
+            return default_group
+    return {}
+
+
+def _effective_config(raw_state: Mapping[str, Any]) -> Mapping[str, Any]:
+    default_group = _default_group_state(raw_state)
+    group_config = default_group.get("config")
+    if isinstance(group_config, Mapping):
+        return group_config
+
+    config = raw_state.get("config")
+    if isinstance(config, Mapping):
+        return config
+
+    return {}
+
+
+def _extract_cpu_count(
+    raw_state: Mapping[str, Any], work_units: tuple[WorkUnit, ...]
+) -> int | None:
+    info = raw_state.get("info")
+    if isinstance(info, Mapping):
+        for key in (
+            "cpus",
+            "cpu_count",
+            "cpus_count",
+            "cpu_threads",
+            "cpus_available",
+        ):
+            value = _as_int(info.get(key))
+            if value is not None:
+                return value
+
+    config = _effective_config(raw_state)
+    for key in ("cpus", "cpu", "cpu_count"):
+        value = _as_int(config.get(key))
+        if value is not None:
+            return value
+
+    counts = [unit.cpus for unit in work_units if unit.cpus is not None]
+    if counts:
+        return max(counts)
+
+    return None
+
+
+def _extract_gpu_count(
+    raw_state: Mapping[str, Any], work_units: tuple[WorkUnit, ...]
+) -> int | None:
+    info = raw_state.get("info")
+    if isinstance(info, Mapping):
+        for key in ("gpus", "gpu_count", "gpus_count"):
+            value = info.get(key)
+            if isinstance(value, list):
+                return len(value)
+            parsed = _as_int(value)
+            if parsed is not None:
+                return parsed
+
+    for key in ("gpus", "gpu", "devices"):
+        value = raw_state.get(key)
+        if isinstance(value, list):
+            return len(value)
+
+    gpu_ids = {gpu for unit in work_units for gpu in unit.gpus}
+    if gpu_ids:
+        return len(gpu_ids)
+
+    return None
 
 
 def _iter_default_group_units(raw_state: Mapping[str, Any]) -> list[WorkUnit]:

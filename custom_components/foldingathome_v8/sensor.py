@@ -30,7 +30,6 @@ from .const import (
     ATTR_WAIT,
     ATTR_WORK_UNIT_ID,
     ATTR_WORK_UNIT_NUMBER,
-    CLIENT_STATES,
     CLIENT_STATE_OPTIONS,
     DOMAIN,
 )
@@ -51,6 +50,9 @@ async def async_setup_entry(
         FoldingAtHomeClientStateSensor(coordinator, entry),
         FoldingAtHomeActiveWorkUnitsSensor(coordinator, entry),
         FoldingAtHomeTotalPpdSensor(coordinator, entry),
+        FoldingAtHomeCpuCountSensor(coordinator, entry),
+        FoldingAtHomeGpuCountSensor(coordinator, entry),
+        FoldingAtHomeMachineNameSensor(coordinator, entry),
         FoldingAtHomeClientVersionSensor(coordinator, entry),
     ]
 
@@ -173,6 +175,65 @@ class FoldingAtHomeClientVersionSensor(FoldingAtHomeSensor):
         if self.coordinator.data.info is None:
             return None
         return self.coordinator.data.info.version
+
+
+class FoldingAtHomeCpuCountSensor(FoldingAtHomeSensor):
+    """Sensor for the machine CPU count reported by FAH."""
+
+    _attr_name = "CPU Count"
+
+    def __init__(
+        self,
+        coordinator: FoldingAtHomeCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_unique_id = f"{config_entry.entry_id}_cpu_count"
+
+    @property
+    def native_value(self) -> int | None:
+        """Return the reported CPU count."""
+        return self.coordinator.data.cpu_count
+
+
+class FoldingAtHomeGpuCountSensor(FoldingAtHomeSensor):
+    """Sensor for the machine GPU count reported by FAH."""
+
+    _attr_name = "GPU Count"
+
+    def __init__(
+        self,
+        coordinator: FoldingAtHomeCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_unique_id = f"{config_entry.entry_id}_gpu_count"
+
+    @property
+    def native_value(self) -> int | None:
+        """Return the reported GPU count."""
+        return self.coordinator.data.gpu_count
+
+
+class FoldingAtHomeMachineNameSensor(FoldingAtHomeSensor):
+    """Sensor for the FAH machine name."""
+
+    _attr_name = "Machine Name"
+
+    def __init__(
+        self,
+        coordinator: FoldingAtHomeCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_unique_id = f"{config_entry.entry_id}_machine_name"
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the configured machine name."""
+        if self.coordinator.data.info is None:
+            return None
+        return self.coordinator.data.info.machine_name
 
 
 class FoldingAtHomeWorkUnitSensor(FoldingAtHomeSensor):

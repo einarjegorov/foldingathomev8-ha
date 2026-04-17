@@ -24,7 +24,7 @@ models = _load_module("fah_models", "custom_components/foldingathome_v8/models.p
 def test_normalize_client_data_supports_root_config_snapshot() -> None:
     raw = {
         "info": {"id": "client-1", "mach_name": "Node A", "version": "8.4.6"},
-        "config": {"paused": True, "finish": False},
+        "config": {"paused": True, "finish": False, "cpus": 12},
         "units": [],
     }
 
@@ -33,12 +33,18 @@ def test_normalize_client_data_supports_root_config_snapshot() -> None:
     assert data.client_key == "client-1"
     assert data.title == "Node A"
     assert data.client_state == models.STATE_PAUSED
+    assert data.cpu_count == 12
     assert data.total_ppd == 0
 
 
 def test_normalize_client_data_supports_group_snapshot_and_filters_default_group() -> None:
     raw = {
-        "info": {"id": "client-2", "mach_name": "Node B"},
+        "info": {
+            "id": "client-2",
+            "mach_name": "Node B",
+            "gpu_count": 2,
+            "cpus": 16,
+        },
         "groups": {
             "": {"config": {"paused": False, "finish": True}},
             "alt": {"config": {"paused": True, "finish": False}},
@@ -66,6 +72,8 @@ def test_normalize_client_data_supports_group_snapshot_and_filters_default_group
     data = models.normalize_client_data(raw, available=True, host="fah", port=7396)
 
     assert data.client_state == models.STATE_FINISHING
+    assert data.cpu_count == 16
+    assert data.gpu_count == 2
     assert len(data.active_work_units) == 1
     assert data.active_work_units[0].unit_id == "wu-default"
     assert data.total_ppd == 12345
@@ -100,3 +108,19 @@ def test_normalize_client_data_prefers_paused_over_running_units() -> None:
     data = models.normalize_client_data(raw, available=True, host="fah", port=7396)
 
     assert data.client_state == models.STATE_PAUSED
+
+
+def test_normalize_client_data_falls_back_to_active_work_units_for_gpu_count() -> None:
+    raw = {
+        "info": {"id": "client-5", "mach_name": "Node E"},
+        "config": {"paused": False, "finish": False},
+        "units": [
+            {"id": "wu-1", "state": "RUN", "gpus": [0]},
+            {"id": "wu-2", "state": "RUN", "gpus": [1]},
+            {"id": "wu-3", "state": "RUN", "gpus": [1]},
+        ],
+    }
+
+    data = models.normalize_client_data(raw, available=True, host="fah", port=7396)
+
+    assert data.gpu_count == 2
