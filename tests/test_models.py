@@ -33,6 +33,10 @@ def test_normalize_client_data_supports_root_config_snapshot() -> None:
     assert data.client_key == "client-1"
     assert data.title == "Node A"
     assert data.client_state == models.STATE_PAUSED
+    assert data.is_paused is True
+    assert data.is_running is False
+    assert data.is_finishing is False
+    assert data.has_active_work is False
     assert data.cpu_count == 12
     assert data.overall_progress_percent == 0.0
     assert data.total_ppd == 0
@@ -73,6 +77,8 @@ def test_normalize_client_data_supports_group_snapshot_and_filters_default_group
     data = models.normalize_client_data(raw, available=True, host="fah", port=7396)
 
     assert data.client_state == models.STATE_FINISHING
+    assert data.is_finishing is True
+    assert data.has_active_work is True
     assert data.cpu_count == 16
     assert data.gpu_count == 2
     assert data.overall_progress_percent == 50.0
@@ -91,6 +97,9 @@ def test_normalize_client_data_marks_disconnected_clients() -> None:
     data = models.normalize_client_data(raw, available=False, host="fah", port=7396)
 
     assert data.client_state == models.STATE_DISCONNECTED
+    assert data.is_running is False
+    assert data.is_paused is False
+    assert data.is_finishing is False
 
 
 def test_normalize_client_data_prefers_paused_over_running_units() -> None:

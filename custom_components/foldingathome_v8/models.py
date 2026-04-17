@@ -104,6 +104,26 @@ class NormalizedClientData:
             return self.info.machine_name
         return self.host
 
+    @property
+    def is_running(self) -> bool:
+        """Return whether the client is actively folding."""
+        return self.client_state == STATE_RUNNING
+
+    @property
+    def is_paused(self) -> bool:
+        """Return whether the client is paused."""
+        return self.client_state == STATE_PAUSED
+
+    @property
+    def is_finishing(self) -> bool:
+        """Return whether the client is finishing current work."""
+        return self.client_state == STATE_FINISHING
+
+    @property
+    def has_active_work(self) -> bool:
+        """Return whether the client currently has active work units."""
+        return bool(self.active_work_units)
+
 
 def normalize_client_data(
     raw_state: Mapping[str, Any] | None,
