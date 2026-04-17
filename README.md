@@ -1,6 +1,9 @@
+<img width="250" height="250" alt="logo" src="https://github.com/user-attachments/assets/25b67c77-89b5-49f4-99a1-f95d5b0c4bca" />
+
+
 # Folding@home v8 for Home Assistant
 
-`foldingathome_v8` is a HACS custom integration for monitoring and controlling a
+`foldingathomev8-ha` is a custom integration for monitoring and controlling a
 Folding@home v8 instance from Home Assistant.
 
 This integration connects directly to the FAH v8 websocket endpoint at:
