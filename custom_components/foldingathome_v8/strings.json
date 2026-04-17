@@ -1,0 +1,29 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Folding@home v8",
+        "data": {
+          "host": "Host",
+          "port": "Port"
+        }
+      },
+      "reconfigure": {
+        "title": "Update Folding@home v8 connection",
+        "data": {
+          "host": "Host",
+          "port": "Port"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the Folding@home websocket",
+      "invalid_snapshot": "The websocket did not return a valid Folding@home snapshot",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This Folding@home client is already configured"
+    }
+  }
+}
+
