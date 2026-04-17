@@ -1,17 +1,20 @@
 {
+  "title": "Folding@home v8",
   "config": {
     "step": {
       "user": {
         "title": "Connect to Folding@home v8",
+        "description": "Host/IP address and port of your FAHv8 instance. Note that FAHv8 WebSocket API has no authentication and traffic is unencrypted. Make sure that you're connecting over a trusted network.",
         "data": {
-          "host": "Host",
+          "host": "Host / IP address",
           "port": "Port"
         }
       },
       "reconfigure": {
         "title": "Update Folding@home v8 connection",
+        "description": "Host/IP address and port of your FAHv8 instance. Note that FAHv8 WebSocket API has no authentication and traffic is unencrypted. Make sure that you're connecting over a trusted network.",
         "data": {
-          "host": "Host",
+          "host": "Host / IP address",
           "port": "Port"
         }
       }
@@ -26,4 +29,3 @@
     }
   }
 }
-
