@@ -46,3 +46,7 @@ ensure that the port is exposed and reachable from Home Assistant.
 3. Restart Home Assistant.
 4. Add the `Folding@home v8` integration from `Settings -> Devices & services`.
 5. Enter the host and port for your FAH v8 client.
+
+## AI Disclosure
+
+AI-assisted tools were used during the development of this integration.

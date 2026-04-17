@@ -2,13 +2,13 @@
   "domain": "foldingathome_v8",
   "name": "Folding@home v8",
   "codeowners": [
-    "@eikka"
+    "@einarjegorov"
   ],
   "config_flow": true,
-  "documentation": "https://github.com/eikka/fah-ha",
+  "documentation": "https://github.com/einarjegorov/foldingathomev8-ha",
   "integration_type": "device",
   "iot_class": "local_push",
-  "issue_tracker": "https://github.com/eikka/fah-ha/issues",
+  "issue_tracker": "https://github.com/einarjegorov/foldingathomev8-ha/issues",
   "loggers": [
     "custom_components.foldingathome_v8"
   ],
