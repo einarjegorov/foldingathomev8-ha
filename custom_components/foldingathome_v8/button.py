@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, FINISH_RESUME_TIMEOUT
+from .const import DOMAIN, FINISH_RESUME_DELAY
 from .coordinator import FoldingAtHomeCoordinator
 from .entity import FoldingAtHomeEntity
 
@@ -48,13 +49,5 @@ class FoldingAtHomeStateButton(FoldingAtHomeEntity, ButtonEntity):
         """Send the requested state command."""
         if self._command == "finish" and self.coordinator.data.group_config.paused:
             await self.coordinator.client.async_send_state_command("fold")
-            try:
-                await self.coordinator.client.async_wait_for_condition(
-                    lambda data: data.available and not data.group_config.paused,
-                    FINISH_RESUME_TIMEOUT,
-                )
-            except TimeoutError as err:
-                raise HomeAssistantError(
-                    "Timed out waiting for Folding@home to resume before finishing"
-                ) from err
+            await asyncio.sleep(FINISH_RESUME_DELAY)
         await self.coordinator.client.async_send_state_command(self._command)

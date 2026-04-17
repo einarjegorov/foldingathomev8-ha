@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, patch
 
 from homeassistant.const import CONF_HOST, CONF_PORT
@@ -18,28 +17,9 @@ class _StubClient:
         self.send_calls: list[str] = []
         self.raw_state = None
         self.available = True
-        self.wait_calls: list[float] = []
-        self.wait_error: Exception | None = None
 
     async def async_send_state_command(self, state: str) -> None:
         self.send_calls.append(state)
-
-    async def async_wait_for_condition(self, predicate, timeout: float) -> None:
-        self.wait_calls.append(timeout)
-        if self.wait_error is not None:
-            raise self.wait_error
-
-        updated = normalize_client_data(
-            {
-                "info": {"id": "abc", "mach_name": "My FAH"},
-                "config": {"paused": False, "finish": False},
-                "units": [],
-            },
-            available=True,
-            host="fah.local",
-            port=7396,
-        )
-        assert predicate(updated)
 
 
 async def test_entities_reflect_normalized_state(hass) -> None:
@@ -115,44 +95,11 @@ async def test_finish_button_unpauses_before_finishing(hass) -> None:
     entry = type("Entry", (), {"entry_id": "entry"})()
 
     finish = FoldingAtHomeStateButton(coordinator, entry, "finish", "Finish")
-    await finish.async_press()
+    with patch("custom_components.foldingathome_v8.button.asyncio.sleep", AsyncMock()) as sleep:
+        await finish.async_press()
 
     assert coordinator.client.send_calls == ["fold", "finish"]
-    assert coordinator.client.wait_calls == [10]
-
-
-async def test_finish_button_raises_if_resume_never_happens(hass) -> None:
-    """Finish should fail cleanly if the client never resumes from paused."""
-    from homeassistant.exceptions import HomeAssistantError
-
-    from custom_components.foldingathome_v8.button import FoldingAtHomeStateButton
-
-    coordinator = type("Coordinator", (), {})()
-    coordinator.data = normalize_client_data(
-        {
-            "info": {"id": "abc", "mach_name": "My FAH"},
-            "config": {"paused": True, "finish": False},
-            "units": [],
-        },
-        available=True,
-        host="fah.local",
-        port=7396,
-    )
-    coordinator.client = _StubClient()
-    coordinator.client.wait_error = TimeoutError()
-    entry = type("Entry", (), {"entry_id": "entry"})()
-
-    finish = FoldingAtHomeStateButton(coordinator, entry, "finish", "Finish")
-
-    try:
-        await finish.async_press()
-    except HomeAssistantError:
-        pass
-    else:
-        raise AssertionError("Expected HomeAssistantError when resume times out")
-
-    assert coordinator.client.send_calls == ["fold"]
-    assert coordinator.client.wait_calls == [10]
+    sleep.assert_awaited_once()
 
 
 async def test_diagnostics_redacts_sensitive_fields(hass) -> None:
