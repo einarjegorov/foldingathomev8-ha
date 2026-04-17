@@ -27,6 +27,10 @@ async def async_setup_entry(
         FoldingAtHomeActiveWorkUnitsSensor(coordinator, entry),
         FoldingAtHomeOverallProgressSensor(coordinator, entry),
         FoldingAtHomeTotalPpdSensor(coordinator, entry),
+        FoldingAtHomeFailedWorkUnitsSensor(coordinator, entry),
+        FoldingAtHomeLostWorkUnitsSensor(coordinator, entry),
+        FoldingAtHomeEnabledCpuCountSensor(coordinator, entry),
+        FoldingAtHomeEnabledGpuCountSensor(coordinator, entry),
         FoldingAtHomeCpuCountSensor(coordinator, entry),
         FoldingAtHomeGpuCountSensor(coordinator, entry),
         FoldingAtHomeMachineNameSensor(coordinator, entry),
@@ -102,6 +106,82 @@ class FoldingAtHomeTotalPpdSensor(FoldingAtHomeSensor):
     def native_value(self) -> int:
         """Return the total PPD estimate."""
         return self.coordinator.data.total_ppd
+
+
+class FoldingAtHomeFailedWorkUnitsSensor(FoldingAtHomeSensor):
+    """Sensor for failed work-unit count."""
+
+    _attr_name = "Failed Work Units"
+
+    def __init__(
+        self,
+        coordinator: FoldingAtHomeCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_unique_id = f"{config_entry.entry_id}_failed_work_units"
+
+    @property
+    def native_value(self) -> int:
+        """Return the number of failed work units."""
+        return self.coordinator.data.group_status.failed_work_units
+
+
+class FoldingAtHomeLostWorkUnitsSensor(FoldingAtHomeSensor):
+    """Sensor for lost work-unit count."""
+
+    _attr_name = "Lost Work Units"
+
+    def __init__(
+        self,
+        coordinator: FoldingAtHomeCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_unique_id = f"{config_entry.entry_id}_lost_work_units"
+
+    @property
+    def native_value(self) -> int:
+        """Return the number of lost work units."""
+        return self.coordinator.data.group_status.lost_work_units
+
+
+class FoldingAtHomeEnabledCpuCountSensor(FoldingAtHomeSensor):
+    """Sensor for configured CPU slots available to FAH."""
+
+    _attr_name = "Enabled CPU Count"
+
+    def __init__(
+        self,
+        coordinator: FoldingAtHomeCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_unique_id = f"{config_entry.entry_id}_enabled_cpu_count"
+
+    @property
+    def native_value(self) -> int | None:
+        """Return the configured CPU count available to FAH."""
+        return self.coordinator.data.group_config.enabled_cpu_count
+
+
+class FoldingAtHomeEnabledGpuCountSensor(FoldingAtHomeSensor):
+    """Sensor for enabled GPU devices in the default group."""
+
+    _attr_name = "Enabled GPU Count"
+
+    def __init__(
+        self,
+        coordinator: FoldingAtHomeCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_unique_id = f"{config_entry.entry_id}_enabled_gpu_count"
+
+    @property
+    def native_value(self) -> int | None:
+        """Return the number of enabled GPUs."""
+        return self.coordinator.data.group_config.enabled_gpu_count
 
 
 class FoldingAtHomeOverallProgressSensor(FoldingAtHomeSensor):

@@ -34,8 +34,22 @@ class ClientInfo:
 class GroupConfig:
     """Default group configuration."""
 
+    on_idle: bool
+    on_battery: bool
+    keep_awake: bool
     paused: bool
     finish: bool
+    enabled_cpu_count: int | None
+    enabled_gpu_count: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class GroupStatus:
+    """Runtime status fields for the default group."""
+
+    wait: str | None
+    failed_work_units: int
+    lost_work_units: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,6 +96,7 @@ class NormalizedClientData:
     info: ClientInfo | None
     group_name: str
     group_config: GroupConfig
+    group_status: GroupStatus
     client_state: str
     cpu_count: int | None
     gpu_count: int | None
@@ -124,6 +139,31 @@ class NormalizedClientData:
         """Return whether the client currently has active work units."""
         return bool(self.active_work_units)
 
+    @property
+    def only_when_idle(self) -> bool:
+        """Return whether folding is configured to run only when idle."""
+        return self.group_config.on_idle
+
+    @property
+    def allow_on_battery(self) -> bool:
+        """Return whether folding is allowed while on battery."""
+        return self.group_config.on_battery
+
+    @property
+    def keep_awake(self) -> bool:
+        """Return whether FAH is configured to keep the machine awake."""
+        return self.group_config.keep_awake
+
+    @property
+    def has_failed_work_units(self) -> bool:
+        """Return whether any work units have failed."""
+        return self.group_status.failed_work_units > 0
+
+    @property
+    def has_lost_work_units(self) -> bool:
+        """Return whether any work units have been lost."""
+        return self.group_status.lost_work_units > 0
+
 
 def normalize_client_data(
     raw_state: Mapping[str, Any] | None,
@@ -140,7 +180,20 @@ def normalize_client_data(
             port=port,
             info=None,
             group_name="",
-            group_config=GroupConfig(paused=False, finish=False),
+            group_config=GroupConfig(
+                on_idle=False,
+                on_battery=False,
+                keep_awake=False,
+                paused=False,
+                finish=False,
+                enabled_cpu_count=None,
+                enabled_gpu_count=None,
+            ),
+            group_status=GroupStatus(
+                wait=None,
+                failed_work_units=0,
+                lost_work_units=0,
+            ),
             client_state=STATE_DISCONNECTED if not available else STATE_WAITING,
             cpu_count=None,
             gpu_count=None,
@@ -154,6 +207,7 @@ def normalize_client_data(
     info = _normalize_info(info_data) if isinstance(info_data, Mapping) else None
 
     group_config = _default_group_config(raw_state)
+    group_status = _default_group_status(raw_state)
     work_units = tuple(_iter_default_group_units(raw_state))
     total_ppd = sum(unit.ppd or 0 for unit in work_units)
     cpu_count = _extract_cpu_count(raw_state, work_units)
@@ -167,6 +221,7 @@ def normalize_client_data(
         info=info,
         group_name="",
         group_config=group_config,
+        group_status=group_status,
         client_state=_derive_client_state(
             available=available,
             group_config=group_config,
@@ -193,25 +248,34 @@ def _normalize_info(info: Mapping[str, Any]) -> ClientInfo:
 
 
 def _default_group_config(raw_state: Mapping[str, Any]) -> GroupConfig:
-    groups = raw_state.get("groups")
-    if isinstance(groups, Mapping):
-        default_group = groups.get("")
-        if isinstance(default_group, Mapping):
-            config = default_group.get("config")
-            if isinstance(config, Mapping):
-                return GroupConfig(
-                    paused=bool(config.get("paused", False)),
-                    finish=bool(config.get("finish", False)),
-                )
-
-    config = raw_state.get("config")
-    if isinstance(config, Mapping):
-        return GroupConfig(
-            paused=bool(config.get("paused", False)),
-            finish=bool(config.get("finish", False)),
+    config = _effective_config(raw_state)
+    enabled_gpus = config.get("gpus")
+    enabled_gpu_count = None
+    if isinstance(enabled_gpus, Mapping):
+        enabled_gpu_count = sum(
+            1
+            for gpu in enabled_gpus.values()
+            if isinstance(gpu, Mapping) and gpu.get("enabled", False)
         )
 
-    return GroupConfig(paused=False, finish=False)
+    return GroupConfig(
+        on_idle=bool(config.get("on_idle", False)),
+        on_battery=bool(config.get("on_battery", False)),
+        keep_awake=bool(config.get("keep_awake", False)),
+        paused=bool(config.get("paused", False)),
+        finish=bool(config.get("finish", False)),
+        enabled_cpu_count=_as_int(config.get("cpus")),
+        enabled_gpu_count=enabled_gpu_count,
+    )
+
+
+def _default_group_status(raw_state: Mapping[str, Any]) -> GroupStatus:
+    group = _default_group_state(raw_state)
+    return GroupStatus(
+        wait=_as_str(group.get("wait")),
+        failed_work_units=_as_int(group.get("failed_wus")) or 0,
+        lost_work_units=_as_int(group.get("lost_wus")) or 0,
+    )
 
 
 def _default_group_state(raw_state: Mapping[str, Any]) -> Mapping[str, Any]:

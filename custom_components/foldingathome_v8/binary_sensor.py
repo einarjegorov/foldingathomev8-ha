@@ -29,6 +29,11 @@ async def async_setup_entry(
             FoldingAtHomePausedBinarySensor(coordinator, entry),
             FoldingAtHomeFinishingBinarySensor(coordinator, entry),
             FoldingAtHomeHasActiveWorkBinarySensor(coordinator, entry),
+            FoldingAtHomeKeepAwakeBinarySensor(coordinator, entry),
+            FoldingAtHomeOnlyWhenIdleBinarySensor(coordinator, entry),
+            FoldingAtHomeAllowOnBatteryBinarySensor(coordinator, entry),
+            FoldingAtHomeHasFailedWorkUnitsBinarySensor(coordinator, entry),
+            FoldingAtHomeHasLostWorkUnitsBinarySensor(coordinator, entry),
         ]
     )
 
@@ -144,3 +149,97 @@ class FoldingAtHomeHasActiveWorkBinarySensor(FoldingAtHomeStateBinarySensor):
     def is_on(self) -> bool:
         """Return whether there are active work units."""
         return self.coordinator.data.has_active_work
+
+
+class FoldingAtHomeKeepAwakeBinarySensor(FoldingAtHomeStateBinarySensor):
+    """Binary sensor showing whether FAH keeps the machine awake."""
+
+    def __init__(
+        self,
+        coordinator: FoldingAtHomeCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator, config_entry, key="keep_awake", name="Keep Awake")
+
+    @property
+    def is_on(self) -> bool:
+        """Return whether keep-awake is enabled."""
+        return self.coordinator.data.keep_awake
+
+
+class FoldingAtHomeOnlyWhenIdleBinarySensor(FoldingAtHomeStateBinarySensor):
+    """Binary sensor showing idle-only scheduling."""
+
+    def __init__(
+        self,
+        coordinator: FoldingAtHomeCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(
+            coordinator, config_entry, key="only_when_idle", name="Only When Idle"
+        )
+
+    @property
+    def is_on(self) -> bool:
+        """Return whether folding runs only when the machine is idle."""
+        return self.coordinator.data.only_when_idle
+
+
+class FoldingAtHomeAllowOnBatteryBinarySensor(FoldingAtHomeStateBinarySensor):
+    """Binary sensor showing whether folding is allowed on battery."""
+
+    def __init__(
+        self,
+        coordinator: FoldingAtHomeCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(
+            coordinator, config_entry, key="allow_on_battery", name="Allow On Battery"
+        )
+
+    @property
+    def is_on(self) -> bool:
+        """Return whether folding is allowed on battery."""
+        return self.coordinator.data.allow_on_battery
+
+
+class FoldingAtHomeHasFailedWorkUnitsBinarySensor(FoldingAtHomeStateBinarySensor):
+    """Binary sensor showing whether any work units have failed."""
+
+    def __init__(
+        self,
+        coordinator: FoldingAtHomeCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(
+            coordinator,
+            config_entry,
+            key="has_failed_work_units",
+            name="Has Failed Work Units",
+        )
+
+    @property
+    def is_on(self) -> bool:
+        """Return whether there are any failed work units."""
+        return self.coordinator.data.has_failed_work_units
+
+
+class FoldingAtHomeHasLostWorkUnitsBinarySensor(FoldingAtHomeStateBinarySensor):
+    """Binary sensor showing whether any work units have been lost."""
+
+    def __init__(
+        self,
+        coordinator: FoldingAtHomeCoordinator,
+        config_entry: ConfigEntry,
+    ) -> None:
+        super().__init__(
+            coordinator,
+            config_entry,
+            key="has_lost_work_units",
+            name="Has Lost Work Units",
+        )
+
+    @property
+    def is_on(self) -> bool:
+        """Return whether there are any lost work units."""
+        return self.coordinator.data.has_lost_work_units

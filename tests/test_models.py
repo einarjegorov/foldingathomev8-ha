@@ -37,6 +37,13 @@ def test_normalize_client_data_supports_root_config_snapshot() -> None:
     assert data.is_running is False
     assert data.is_finishing is False
     assert data.has_active_work is False
+    assert data.keep_awake is False
+    assert data.only_when_idle is False
+    assert data.allow_on_battery is False
+    assert data.has_failed_work_units is False
+    assert data.has_lost_work_units is False
+    assert data.group_config.enabled_cpu_count == 12
+    assert data.group_config.enabled_gpu_count is None
     assert data.cpu_count == 12
     assert data.overall_progress_percent == 0.0
     assert data.total_ppd == 0
@@ -51,7 +58,23 @@ def test_normalize_client_data_supports_group_snapshot_and_filters_default_group
             "cpus": 16,
         },
         "groups": {
-            "": {"config": {"paused": False, "finish": True}},
+            "": {
+                "config": {
+                    "on_idle": True,
+                    "on_battery": True,
+                    "keep_awake": True,
+                    "paused": False,
+                    "finish": True,
+                    "cpus": 4,
+                    "gpus": {
+                        "gpu:1": {"enabled": True},
+                        "gpu:2": {"enabled": False},
+                        "gpu:3": {"enabled": True}
+                    }
+                },
+                "failed_wus": 2,
+                "lost_wus": 1
+            },
             "alt": {"config": {"paused": True, "finish": False}},
         },
         "units": [
@@ -79,6 +102,15 @@ def test_normalize_client_data_supports_group_snapshot_and_filters_default_group
     assert data.client_state == models.STATE_FINISHING
     assert data.is_finishing is True
     assert data.has_active_work is True
+    assert data.keep_awake is True
+    assert data.only_when_idle is True
+    assert data.allow_on_battery is True
+    assert data.has_failed_work_units is True
+    assert data.has_lost_work_units is True
+    assert data.group_config.enabled_cpu_count == 4
+    assert data.group_config.enabled_gpu_count == 2
+    assert data.group_status.failed_work_units == 2
+    assert data.group_status.lost_work_units == 1
     assert data.cpu_count == 16
     assert data.gpu_count == 2
     assert data.overall_progress_percent == 50.0
