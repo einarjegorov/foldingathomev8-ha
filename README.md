@@ -50,3 +50,7 @@ ensure that the port is exposed and reachable from Home Assistant.
 ## AI Disclosure
 
 AI-assisted tools were used during the development of this integration.
+
+## Entity list showcase
+
+<img width="542" height="1158" alt="image" src="https://github.com/user-attachments/assets/d5c5a6da-f5b4-4ed0-9622-2c0ed2e96ba4" />
