@@ -85,6 +85,7 @@ class NormalizedClientData:
     client_state: str
     cpu_count: int | None
     gpu_count: int | None
+    overall_progress_percent: float
     active_work_units: tuple[WorkUnit, ...]
     total_ppd: int
     raw_state: Mapping[str, Any]
@@ -123,6 +124,7 @@ def normalize_client_data(
             client_state=STATE_DISCONNECTED if not available else STATE_WAITING,
             cpu_count=None,
             gpu_count=None,
+            overall_progress_percent=0.0,
             active_work_units=(),
             total_ppd=0,
             raw_state={},
@@ -136,6 +138,7 @@ def normalize_client_data(
     total_ppd = sum(unit.ppd or 0 for unit in work_units)
     cpu_count = _extract_cpu_count(raw_state, work_units)
     gpu_count = _extract_gpu_count(raw_state, work_units)
+    overall_progress_percent = _extract_overall_progress_percent(work_units)
 
     return NormalizedClientData(
         available=available,
@@ -151,6 +154,7 @@ def normalize_client_data(
         ),
         cpu_count=cpu_count,
         gpu_count=gpu_count,
+        overall_progress_percent=overall_progress_percent,
         active_work_units=work_units,
         total_ppd=total_ppd,
         raw_state=raw_state,
@@ -266,6 +270,17 @@ def _extract_gpu_count(
     return None
 
 
+def _extract_overall_progress_percent(work_units: tuple[WorkUnit, ...]) -> float:
+    if not work_units:
+        return 0.0
+
+    progress_values = [
+        unit.progress_percent if unit.progress_percent is not None else 0.0
+        for unit in work_units
+    ]
+    return round(sum(progress_values) / len(progress_values), 1)
+
+
 def _iter_default_group_units(raw_state: Mapping[str, Any]) -> list[WorkUnit]:
     units = raw_state.get("units")
     if not isinstance(units, list):
@@ -299,7 +314,7 @@ def _iter_default_group_units(raw_state: Mapping[str, Any]) -> list[WorkUnit]:
                 group=group,
                 state=_as_str(item.get("state")),
                 paused=bool(item.get("paused", False)),
-                progress=_as_float(item.get("progress")),
+                progress=_extract_unit_progress(item),
                 project=_mapping_int(assignment, "project"),
                 run=_mapping_int(wu, "run"),
                 clone=_mapping_int(wu, "clone"),
@@ -319,6 +334,17 @@ def _iter_default_group_units(raw_state: Mapping[str, Any]) -> list[WorkUnit]:
         )
 
     return normalized
+
+
+def _extract_unit_progress(unit: Mapping[str, Any]) -> float | None:
+    for key in ("wu_progress", "progress"):
+        value = _as_float(unit.get(key))
+        if value is None:
+            continue
+        if value > 1:
+            return value / 100
+        return value
+    return None
 
 
 def _derive_client_state(

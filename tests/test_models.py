@@ -34,6 +34,7 @@ def test_normalize_client_data_supports_root_config_snapshot() -> None:
     assert data.title == "Node A"
     assert data.client_state == models.STATE_PAUSED
     assert data.cpu_count == 12
+    assert data.overall_progress_percent == 0.0
     assert data.total_ppd == 0
 
 
@@ -74,6 +75,7 @@ def test_normalize_client_data_supports_group_snapshot_and_filters_default_group
     assert data.client_state == models.STATE_FINISHING
     assert data.cpu_count == 16
     assert data.gpu_count == 2
+    assert data.overall_progress_percent == 50.0
     assert len(data.active_work_units) == 1
     assert data.active_work_units[0].unit_id == "wu-default"
     assert data.total_ppd == 12345
@@ -124,3 +126,37 @@ def test_normalize_client_data_falls_back_to_active_work_units_for_gpu_count() -
     data = models.normalize_client_data(raw, available=True, host="fah", port=7396)
 
     assert data.gpu_count == 2
+
+
+def test_normalize_client_data_averages_progress_across_active_work_units() -> None:
+    raw = {
+        "info": {"id": "client-6", "mach_name": "Node F"},
+        "config": {"paused": False, "finish": False},
+        "units": [
+            {"id": "wu-1", "state": "RUN", "progress": 0.25},
+            {"id": "wu-2", "state": "RUN", "progress": 0.75},
+        ],
+    }
+
+    data = models.normalize_client_data(raw, available=True, host="fah", port=7396)
+
+    assert data.overall_progress_percent == 50.0
+
+
+def test_normalize_client_data_prefers_wu_progress_over_zero_progress() -> None:
+    raw = {
+        "info": {"id": "client-7", "mach_name": "Node G"},
+        "config": {"paused": False, "finish": False},
+        "units": [
+            {
+                "id": "wu-1",
+                "state": "RUN",
+                "progress": 0,
+                "wu_progress": 0.091,
+            }
+        ],
+    }
+
+    data = models.normalize_client_data(raw, available=True, host="fah", port=7396)
+
+    assert data.overall_progress_percent == 9.1
