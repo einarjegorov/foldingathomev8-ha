@@ -16,6 +16,7 @@ from .const import (
     CLIENT_READY_TIMEOUT,
     RECONNECT_INITIAL_DELAY,
     RECONNECT_MAX_DELAY,
+    WEBSOCKET_HEARTBEAT,
     WS_PATH,
 )
 from .models import NormalizedClientData, normalize_client_data
@@ -172,15 +173,19 @@ class FoldingAtHomeClient:
         url = build_ws_url(self.host, self.port)
         _LOGGER.debug("Connecting to Folding@home websocket at %s", url)
 
-        async with self._session.ws_connect(url) as ws:
+        async with self._session.ws_connect(url, heartbeat=WEBSOCKET_HEARTBEAT) as ws:
             self._ws = ws
-            async for message in ws:
-                payload = _decode_ws_message(message)
-                if payload is None:
-                    continue
-                if not self._handle_payload(payload):
-                    continue
-                self._set_available(True)
+            try:
+                async for message in ws:
+                    payload = _decode_ws_message(message)
+                    if payload is None:
+                        continue
+                    if not self._handle_payload(payload):
+                        continue
+                    self._set_available(True)
+            finally:
+                if self._ws is ws:
+                    self._ws = None
 
     def _handle_payload(self, payload: Any) -> bool:
         if isinstance(payload, dict):
@@ -222,7 +227,7 @@ async def async_probe_client(
 
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.ws_connect(url) as ws:
+            async with session.ws_connect(url, heartbeat=WEBSOCKET_HEARTBEAT) as ws:
                 async with asyncio.timeout(timeout):
                     async for message in ws:
                         payload = _decode_ws_message(message)
